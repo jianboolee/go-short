@@ -5,7 +5,7 @@ BINARY_NAME=go-short
 BIN_DIR=bin
 
 # Docker 配置
-DOCKER_USERNAME ?= your-username
+DOCKER_USERNAME ?= jianboo
 DOCKER_IMAGE = $(DOCKER_USERNAME)/go-short
 DOCKER_TAG ?= latest
 
@@ -53,7 +53,8 @@ clean: ## 清理编译文件
 
 docker-build: ## 构建 Docker 镜像
 	@echo "构建 Docker 镜像..."
-	docker build -t $(BINARY_NAME):$(DOCKER_TAG) .
+	@echo "注意: 如果构建失败，请确保 Docker 支持多平台构建"
+	docker build --platform linux/amd64 -t $(BINARY_NAME):$(DOCKER_TAG) .
 	@echo "构建完成！镜像名称: $(BINARY_NAME):$(DOCKER_TAG)"
 
 docker-tag: ## 标记 Docker 镜像

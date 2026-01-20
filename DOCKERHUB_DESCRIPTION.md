@@ -39,14 +39,19 @@ services:
     image: jianboo/go-short:latest
     container_name: go-short
     ports:
-      - "8080:8080"
+      - "8100:8080"
     environment:
-      - DOMAIN=short.example.com
-      - API_KEY=your-secret-key
+      - DOMAIN=
+      - API_KEY=
       - CODE_LENGTH=4
     volumes:
-      - ./data:/app/data
+      - go_short_data:/app/data
     restart: unless-stopped
+
+volumes:
+  go_short_data:
+    driver: local
+
 ```
 
 ## 环境变量
@@ -126,7 +131,7 @@ server {
 
 ## 更多信息
 
-- GitHub: https://github.com/your-username/go-short
+- GitHub: https://github.com/jianboolee/go-short
 - 文档: 查看项目 README.md
 
 ## License

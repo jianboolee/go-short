@@ -61,9 +61,111 @@ curl http://localhost:8080/1
 
 ## API 接口
 
-- `POST /shorten` - 创建短链接（如果配置了 API_KEY，需要在请求头中携带）
-- `GET /:code` 或 `GET /BASE_PATH/:code` - 访问短链接（自动重定向）
-- `GET /health` - 健康检查
+### POST /shorten - 创建短链接
+
+创建短链接，返回短链接码和完整短链接 URL。
+
+**请求参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `url` | string | 是 | 需要缩短的原始 URL |
+
+**请求头：**
+
+如果配置了 `API_KEY`，需要在请求头中添加：
+- `X-API-Key: your-api-key` 或
+- `Authorization: Bearer your-api-key`
+
+**请求示例：**
+
+```bash
+# 基本请求（未配置 API_KEY）
+curl -X POST http://localhost:8080/shorten \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://www.example.com"}'
+
+# 带 API Key 的请求
+curl -X POST http://localhost:8080/shorten \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secret-key" \
+  -d '{"url": "https://www.example.com"}'
+
+# 使用 Authorization 头
+curl -X POST http://localhost:8080/shorten \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-secret-key" \
+  -d '{"url": "https://www.example.com"}'
+```
+
+**响应示例：**
+
+```json
+{
+  "code": "abc123",
+  "short_url": "http://short.example.com/abc123",
+  "url": "https://www.example.com",
+  "visit_count": 0
+}
+```
+
+**响应字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `code` | string | 短链接码 |
+| `short_url` | string | 完整的短链接 URL |
+| `url` | string | 原始 URL |
+| `visit_count` | number | 访问次数（初始为 0） |
+
+**注意事项：**
+
+- 同一个 URL 多次请求会返回相同的短链接码
+- URL 会自动规范化（没有协议会自动添加 `//`）
+- 如果 URL 格式不正确，会返回 400 错误
+
+### GET /:code - 访问短链接
+
+访问短链接，自动重定向到原始 URL。
+
+**路径参数：**
+
+| 参数 | 说明 |
+|------|------|
+| `code` | 短链接码 |
+
+**请求示例：**
+
+```bash
+# 访问短链接
+curl -L http://localhost:8080/abc123
+
+# 或使用浏览器直接访问
+# http://localhost:8080/abc123
+```
+
+**响应：**
+
+- 302/301 重定向到原始 URL
+- 404 如果短链接不存在
+
+### GET /health - 健康检查
+
+检查服务运行状态。
+
+**请求示例：**
+
+```bash
+curl http://localhost:8080/health
+```
+
+**响应示例：**
+
+```json
+{
+  "status": "ok"
+}
+```
 
 ## 使用示例
 
@@ -110,25 +212,23 @@ version: '3.8'
 
 services:
   go-short:
-    build: .
+    image: jianboo/go-short:latest
     container_name: go-short
     ports:
-      - "8080:8080"
+      - "8100:8080"
     environment:
-      - DOMAIN=short.example.com
-      - PORT=8080
-      - BASE_PATH=/s/
+      - BASE_PATH=
+      - DOMAIN=
+      - API_KEY=
       - CODE_LENGTH=4
-      - API_KEY=your-secret-key
-      - DB_PATH=/app/data/shortlinks.db
     volumes:
-      - ./data:/app/data
+      - go_short_data:/app/data
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
+
+volumes:
+  go_short_data:
+    driver: local
+
 ```
 
 然后运行：
