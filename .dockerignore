@@ -1,0 +1,37 @@
+# Git 相关
+.git
+.gitignore
+
+# 构建产物
+bin/
+tmp/
+*.exe
+go-short
+
+# 开发文件
+.air.toml
+*.log
+build-errors.log
+
+# 数据库文件
+*.db
+*.db-shm
+*.db-wal
+data/
+
+# 环境配置（敏感信息）
+.env
+
+# IDE 配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 文档
+README.md
+
+# 其他
+.DS_Store
+node_modules/

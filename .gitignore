@@ -1,0 +1,9 @@
+*.db
+*.db-shm
+*.db-wal
+go-short
+go-short.exe
+bin/
+.env
+tmp/
+build-errors.log

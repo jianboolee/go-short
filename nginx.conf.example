@@ -1,0 +1,227 @@
+# Nginx 配置示例 - Go Short 短链接服务
+# 
+# 使用方法：
+# 1. 复制此文件到 /etc/nginx/sites-available/go-short
+# 2. 创建软链接：ln -s /etc/nginx/sites-available/go-short /etc/nginx/sites-enabled/
+# 3. 测试配置：nginx -t
+# 4. 重载配置：nginx -s reload 或 systemctl reload nginx
+
+# ============================================
+# 示例 1: 自定义域名配置
+# ============================================
+# 访问：http://short.example.com/xxx
+# 
+server {
+    listen 80;
+    server_name short.example.com;
+
+    # 可选：启用 HTTPS
+    # listen 443 ssl http2;
+    # ssl_certificate /path/to/cert.pem;
+    # ssl_certificate_key /path/to/key.pem;
+
+    # 客户端最大请求体大小
+    client_max_body_size 10M;
+
+    # 访问日志
+    access_log /var/log/nginx/go-short-access.log;
+    error_log /var/log/nginx/go-short-error.log;
+
+    # 代理到 go-short 服务
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+        
+        # 超时设置
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        
+        # 缓冲设置
+        proxy_buffering on;
+        proxy_buffer_size 4k;
+        proxy_buffers 8 4k;
+    }
+
+    # 健康检查端点（可选）
+    location /health {
+        proxy_pass http://127.0.0.1:8080/health;
+        access_log off;
+    }
+}
+
+# ============================================
+# 示例 2: 二级目录配置
+# ============================================
+# 访问：http://example.com/s/xxx
+# 需要设置环境变量：BASE_PATH=/s/
+#
+server {
+    listen 80;
+    server_name example.com;
+
+    # 可选：启用 HTTPS
+    # listen 443 ssl http2;
+    # ssl_certificate /path/to/cert.pem;
+    # ssl_certificate_key /path/to/key.pem;
+
+    client_max_body_size 10M;
+
+    access_log /var/log/nginx/go-short-access.log;
+    error_log /var/log/nginx/go-short-error.log;
+
+    # 短链接服务 - 二级目录
+    location /s/ {
+        proxy_pass http://127.0.0.1:8080/s/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+        
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # API 端点 - 短链接创建接口
+    location /shorten {
+        proxy_pass http://127.0.0.1:8080/shorten;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # 允许较大的请求体（用于 JSON）
+        client_max_body_size 1M;
+    }
+
+    # 健康检查
+    location /health {
+        proxy_pass http://127.0.0.1:8080/health;
+        access_log off;
+    }
+
+    # 其他请求由其他服务处理（可选）
+    location / {
+        # 可以是其他应用或默认页面
+        return 404;
+    }
+}
+
+# ============================================
+# 示例 3: 同域名多路径配置
+# ============================================
+# 访问：
+# - http://example.com/shorten (创建短链接)
+# - http://example.com/s/xxx (访问短链接)
+#
+server {
+    listen 80;
+    server_name example.com;
+
+    client_max_body_size 10M;
+    access_log /var/log/nginx/go-short-access.log;
+    error_log /var/log/nginx/go-short-error.log;
+
+    # 创建短链接接口
+    location /shorten {
+        proxy_pass http://127.0.0.1:8080/shorten;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # CORS 支持（如果需要）
+        # add_header Access-Control-Allow-Origin *;
+        # add_header Access-Control-Allow-Methods "GET, POST, OPTIONS";
+        # add_header Access-Control-Allow-Headers "Content-Type, Authorization, X-API-Key";
+    }
+
+    # 短链接访问 - 二级目录
+    location /s/ {
+        proxy_pass http://127.0.0.1:8080/s/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+    }
+
+    # 健康检查
+    location /health {
+        proxy_pass http://127.0.0.1:8080/health;
+        access_log off;
+    }
+
+    # 其他路径
+    location / {
+        # 你的其他应用或默认页面
+        proxy_pass http://127.0.0.1:3000;
+    }
+}
+
+# ============================================
+# 示例 4: HTTPS + HTTP 重定向
+# ============================================
+# HTTP 自动重定向到 HTTPS
+#
+server {
+    listen 80;
+    server_name short.example.com;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name short.example.com;
+
+    # SSL 证书配置
+    ssl_certificate /etc/ssl/certs/go-short.crt;
+    ssl_certificate_key /etc/ssl/private/go-short.key;
+    
+    # SSL 优化
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    client_max_body_size 10M;
+    access_log /var/log/nginx/go-short-access.log;
+    error_log /var/log/nginx/go-short-error.log;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port 443;
+        
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+}
+
+# ============================================
+# 环境变量配置参考
+# ============================================
+#
+# 示例 1 (自定义域名) 需要的环境变量：
+# DOMAIN=short.example.com
+# PORT=8080
+# API_KEY=your-secret-key (可选)
+#
+# 示例 2 和 3 (二级目录) 需要的环境变量：
+# DOMAIN=example.com
+# BASE_PATH=/s/
+# PORT=8080
+# API_KEY=your-secret-key (可选)
+#
