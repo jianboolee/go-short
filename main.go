@@ -260,15 +260,8 @@ func main() {
 	// 创建短链接
 	r.POST("/shorten", createShortLink)
 
-	// 根据配置的基础路径设置路由
-	if config.BasePath != "" {
-		// 有基础路径的情况，如 /s/:code
-		baseRoute := r.Group(config.BasePath)
-		baseRoute.GET(":code", redirect)
-	} else {
-		// 无基础路径，直接在根路径
-		r.GET("/:code", redirect)
-	}
+	// 无基础路径，直接在根路径
+	r.GET("/:code", redirect)
 
 	addr := ":" + config.Port
 	fmt.Printf("服务启动在 %s\n", addr)

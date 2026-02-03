@@ -41,6 +41,7 @@ services:
     ports:
       - "8100:8080"
     environment:
+      - BASE_PATH=
       - DOMAIN=
       - API_KEY=
       - CODE_LENGTH=4
@@ -51,7 +52,6 @@ services:
 volumes:
   go_short_data:
     driver: local
-
 ```
 
 ## 环境变量
